@@ -312,6 +312,48 @@ class HTMLPurifier_HTMLDefinition extends HTMLPurifier_Definition
             }
         }
 
+        // setup forbidden elements ---------------------------------------
+
+        $forbidden_elements   = $config->get('HTML.ForbiddenElements');
+        $forbidden_attributes = $config->get('HTML.ForbiddenAttributes');
+
+        foreach ($this->info as $tag => $info) {
+            if (isset($forbidden_elements[$tag])) {
+                unset($this->info[$tag]);
+                continue;
+            }
+            foreach ($info->attr as $attr => $x) {
+                if (isset($forbidden_attributes["$tag@$attr"]) ||
+                    isset($forbidden_attributes["*@$attr"]) ||
+                    isset($forbidden_attributes[$attr])
+                ) {
+                    unset($this->info[$tag]->attr[$attr]);
+                    continue;
+                } elseif (isset($forbidden_attributes["$tag.$attr"])) { // this segment might get removed eventually
+                    // $tag.$attr are not user supplied, so no worries!
+                    trigger_error(
+                        "Error with $tag.$attr: tag.attr syntax not supported for " .
+                        "HTML.ForbiddenAttributes; use tag@attr instead",
+                        E_USER_WARNING
+                    );
+                }
+            }
+        }
+        foreach ($forbidden_attributes as $key => $v) {
+            if (strlen($key) < 2) {
+                continue;
+            }
+            if ($key[0] != '*') {
+                continue;
+            }
+            if ($key[1] == '.') {
+                trigger_error(
+                    "Error with $key: *.attr syntax not supported for HTML.ForbiddenAttributes; use attr instead",
+                    E_USER_WARNING
+                );
+            }
+        }
+
         // setup allowed attributes ---------------------------------------
 
         $allowed_attributes_mutable = $allowed_attributes; // by copy!
@@ -391,48 +433,6 @@ class HTMLPurifier_HTMLDefinition extends HTMLPurifier_Definition
                         );
                         break;
                 }
-            }
-        }
-
-        // setup forbidden elements ---------------------------------------
-
-        $forbidden_elements   = $config->get('HTML.ForbiddenElements');
-        $forbidden_attributes = $config->get('HTML.ForbiddenAttributes');
-
-        foreach ($this->info as $tag => $info) {
-            if (isset($forbidden_elements[$tag])) {
-                unset($this->info[$tag]);
-                continue;
-            }
-            foreach ($info->attr as $attr => $x) {
-                if (isset($forbidden_attributes["$tag@$attr"]) ||
-                    isset($forbidden_attributes["*@$attr"]) ||
-                    isset($forbidden_attributes[$attr])
-                ) {
-                    unset($this->info[$tag]->attr[$attr]);
-                    continue;
-                } elseif (isset($forbidden_attributes["$tag.$attr"])) { // this segment might get removed eventually
-                    // $tag.$attr are not user supplied, so no worries!
-                    trigger_error(
-                        "Error with $tag.$attr: tag.attr syntax not supported for " .
-                        "HTML.ForbiddenAttributes; use tag@attr instead",
-                        E_USER_WARNING
-                    );
-                }
-            }
-        }
-        foreach ($forbidden_attributes as $key => $v) {
-            if (strlen($key) < 2) {
-                continue;
-            }
-            if ($key[0] != '*') {
-                continue;
-            }
-            if ($key[1] == '.') {
-                trigger_error(
-                    "Error with $key: *.attr syntax not supported for HTML.ForbiddenAttributes; use attr instead",
-                    E_USER_WARNING
-                );
             }
         }
 
